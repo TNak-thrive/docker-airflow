@@ -48,7 +48,6 @@ RUN set -ex \
         python3-requests \
         mysql-client \
         mysql-server \
-        default-libmysqlclient-dev \
         apt-utils \
         libmysqlclient-dev \
         curl \

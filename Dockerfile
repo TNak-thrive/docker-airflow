@@ -66,7 +66,9 @@ RUN apt-get update -yqq \
         curl \
         rsync \
         netcat \
-        locales 
+        locales \
+        libpython3.9-dev \
+        libsasl2-dev
 
 RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen 

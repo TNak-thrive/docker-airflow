@@ -4,7 +4,8 @@
 # BUILD: docker build --rm -t puckel/docker-airflow .
 # SOURCE: https://github.com/puckel/docker-airflow
 
-FROM python:3.6-slim
+FROM openjdk:8-jdk-slim-bullseye
+#FROM python:3.6-slim
 LABEL maintainer="Puckel_"
 
 # Never prompts the user for choices on installation/configuration of packages
@@ -12,7 +13,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.0
+ARG AIRFLOW_VERSION=2.6.0
 ARG AIRFLOW_HOME=/usr/local/airflow
 ARG AIRFLOW_DEPS=""
 ARG PYTHON_DEPS=""
@@ -24,6 +25,17 @@ ENV LANG en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 ENV LC_CTYPE en_US.UTF-8
 ENV LC_MESSAGES en_US.UTF-8
+
+# Install Python 3.9 and related packages
+RUN apt-get update  \
+    && apt-get install -y python3.9 python3-pip \
+    && pip3 install --upgrade pip 
+    
+# Set the default Python version to 3.9
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1 \
+    && python --version
+    
+RUN pip install build-deps    
 
 RUN set -ex \
     && buildDeps=' \
@@ -37,8 +49,9 @@ RUN set -ex \
         liblapack-dev \
         libpq-dev \
         git \
-    ' \
-    && apt-get update -yqq \
+    '
+    
+RUN apt-get update -yqq \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
         $buildDeps \
@@ -46,25 +59,30 @@ RUN set -ex \
         build-essential \
         python3-pip \
         python3-requests \
-        mysql-client \
-        mysql-server \
+        mariadb-client \
+        mariadb-server \
         apt-utils \
-        libmysqlclient-dev \
+        default-libmysqlclient-dev \
         curl \
         rsync \
         netcat \
-        locales \
-    && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
-    && locale-gen \
-    && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+        locales 
+
+RUN sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
+    && locale-gen 
+
+RUN update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
     && pip install -U pip setuptools wheel \
     && pip install pytz \
     && pip install pyOpenSSL \
     && pip install ndg-httpsclient \
-    && pip install pyasn1 \
-    && pip install apache-airflow[crypto,celery,postgres,hive,jdbc,mysql,ssh${AIRFLOW_DEPS:+,}${AIRFLOW_DEPS}]==${AIRFLOW_VERSION} \
-    && pip install 'celery[redis]>=4.1.1,<4.2.0' \
+    && pip install pyasn1
+
+RUN pip install apache-airflow[crypto,celery,postgres,hive,jdbc,mysql,ssh${AIRFLOW_DEPS:+,}${AIRFLOW_DEPS}]==${AIRFLOW_VERSION} 
+
+
+RUN pip install 'celery[redis]>=4.1.1,<4.2.0' \
     && pip install boto3 \
     && pip install elasticsearch \
     && if [ -n "${PYTHON_DEPS}" ]; then pip install ${PYTHON_DEPS}; fi \
